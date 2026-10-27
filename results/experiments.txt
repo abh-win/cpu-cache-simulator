@@ -1,0 +1,98 @@
+== 1. Associativity sweep on the conflict-heavy kernel (single 32 KiB L1, 32 B blocks, 100-cycle memory)
+trace: traces/conflict4.trace (400000 references), 1 level(s), memory 100 cycles
+
+L1 size assoc  policy       miss%   compuls.   capacity   conflict      AMAT
+32K     1      LRU        100.00%       4096      95904     300000    101.00
+32K     2      LRU        100.00%       4096      95904     300000    101.00
+32K     4      LRU         25.00%       4096      95904          0     26.00
+32K     8      LRU         25.00%       4096      95904          0     26.00
+32K     16     LRU         25.00%       4096      95904          0     26.00
+32K     full   LRU         25.00%       4096      95904          0     26.00
+32K     1      FIFO       100.00%       4096      95904     300000    101.00
+32K     2      FIFO       100.00%       4096      95904     300000    101.00
+32K     4      FIFO        25.00%       4096      95904          0     26.00
+32K     8      FIFO        25.00%       4096      95904          0     26.00
+32K     16     FIFO        25.00%       4096      95904          0     26.00
+32K     full   FIFO        25.00%       4096      95904          0     26.00
+32K     1      PLRU       100.00%       4096      95904     300000    101.00
+32K     2      PLRU       100.00%       4096      95904     300000    101.00
+32K     4      PLRU        25.00%       4096      95904          0     26.00
+32K     8      PLRU        25.00%       4096      95904          0     26.00
+32K     16     PLRU        25.00%       4096      95904          0     26.00
+32K     full   PLRU        25.00%       4096      95904          0     26.00
+32K     1      Random     100.00%       4096      95904     300000    101.00
+32K     2      Random      89.58%       4096      95904     258333     90.58
+32K     4      Random      47.14%       4096      95893      88574     48.14
+32K     8      Random      31.43%       4096      95265      26364     32.43
+32K     16     Random      27.38%       4096      94670      10773     28.38
+32K     full   Random      24.57%       4096      94016        172     25.57
+
+== 2. Replacement policies on matrix multiply (96x96 doubles), 8 KiB L1 + 64 KiB L2
+trace: traces/matmul96.trace (1787904 references), 2 level(s), memory 100 cycles
+
+L1 size assoc  policy       miss%   compuls.   capacity   conflict      AMAT
+8K      2      LRU         51.76%       3456     109440     812478     12.49
+8K      4      LRU         51.73%       3456     109440     812004     12.49
+8K      8      LRU         51.72%       3456     109440     811800     12.49
+8K      2      FIFO        51.78%       3456     109440     812898     12.49
+8K      4      FIFO        51.76%       3456     109440     812508     12.49
+8K      8      FIFO        51.75%       3456     109440     812304     12.49
+8K      2      PLRU        51.76%       3456     109440     812478     12.49
+8K      4      PLRU        51.73%       3456     109440     812004     12.49
+8K      8      PLRU        51.72%       3456     109440     811800     12.49
+8K      2      Random      50.84%       3456     109440     796082     12.25
+8K      4      Random      50.27%       3456     109440     785850     12.14
+8K      8      Random      50.01%       3456     109440     781222     12.10
+
+== 3. Naive vs tiled matmul and transpose (32K L1 8-way LRU + 256K L2 8-way PLRU)
+-- matmul96
+      accesses 1787904 (R 1778688 / W 9216)  misses 112896 (R 112896 / W 0)  local miss rate 0.0631
+      accesses 112896 (R 112896 / W 0)  misses 3456 (R 3456 / W 0)  local miss rate 0.0306
+  AMAT measured 1.825 cycles, analytic 1.825 cycles
+-- matmul96_tiled
+      accesses 2709504 (R 1824768 / W 884736)  misses 9216 (R 9216 / W 0)  local miss rate 0.0034
+      accesses 9216 (R 9216 / W 0)  misses 3456 (R 3456 / W 0)  local miss rate 0.3750
+  AMAT measured 1.162 cycles, analytic 1.162 cycles
+-- transpose256
+      accesses 131072 (R 65536 / W 65536)  misses 73728 (R 8192 / W 65536)  local miss rate 0.5625
+      accesses 73728 (R 73728 / W 0)  misses 73728 (R 73728 / W 0)  local miss rate 1.0000
+  AMAT measured 62.875 cycles, analytic 62.875 cycles
+-- transpose256_tiled
+      accesses 131072 (R 65536 / W 65536)  misses 16384 (R 8192 / W 8192)  local miss rate 0.1250
+      accesses 16384 (R 16384 / W 0)  misses 16384 (R 16384 / W 0)  local miss rate 1.0000
+  AMAT measured 14.750 cycles, analytic 14.750 cycles
+
+== 4. Inclusion policies, random 144 KiB working set (32K L1 + 128K L2, 30% writes)
+-- inclusive
+      accesses 1000000 (R 700140 / W 299860)  misses 778042 (R 544921 / W 233121)  local miss rate 0.7780
+      evictions 777509  writebacks 276064  forwarded writes 0  back-invalidations 0
+      accesses 778042 (R 778042 / W 0)  misses 112712 (R 112712 / W 0)  local miss rate 0.1449
+      evictions 110664  writebacks 87843  forwarded writes 0  back-invalidations 21
+  memory: reads 112712  writes 87843
+  AMAT measured 20.052 cycles, analytic 20.052 cycles
+-- nine
+      accesses 1000000 (R 700140 / W 299860)  misses 778042 (R 544921 / W 233121)  local miss rate 0.7780
+      accesses 778042 (R 778042 / W 0)  misses 112725 (R 112725 / W 0)  local miss rate 0.1449
+  memory: reads 112725  writes 87860
+  AMAT measured 20.053 cycles, analytic 20.053 cycles
+-- exclusive
+      accesses 1000000 (R 700140 / W 299860)  misses 778042 (R 544921 / W 233121)  local miss rate 0.7780
+      evictions 777530  writebacks 0  forwarded writes 0  victim fills 0
+      accesses 778042 (R 778042 / W 0)  misses 48201 (R 48201 / W 0)  local miss rate 0.0620
+      evictions 46004  writebacks 41409  forwarded writes 0  victim fills 777530
+  memory: reads 48201  writes 41409
+  AMAT measured 13.601 cycles, analytic 13.601 cycles
+
+== 5. Write policies (L1 only, 8 KiB, random 256 KiB working set, writes stall)
+-- wb-wa
+  memory: reads 484477  writes 148432
+  AMAT measured 127.582 cycles, analytic 97.895 cycles
+-- wb-nwa
+  memory: reads 339195  writes 149892
+  AMAT measured 98.817 cycles, analytic 97.896 cycles
+-- wt-wa
+  memory: reads 484477  writes 149971
+  AMAT measured 127.890 cycles, analytic 97.895 cycles
+-- wt-nwa
+  memory: reads 339195  writes 149971
+  AMAT measured 98.833 cycles, analytic 97.896 cycles
